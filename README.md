@@ -2,9 +2,7 @@
 
 Stack completo dockerizado para ejecutar pruebas de performance con JMeter contra un servicio mock. Todo corre en contenedores, no necesitas instalar nada más que Docker.
 
-## ¿Qué es esto?
-
-Un ambiente autocontenido para testing de performance que incluye:
+## Func
 
 1. **API Mock** (FastAPI): Servicio HTTP que simula un backend bancario con latencias y errores configurables
 2. **JMeter 5.6.3**: Motor de pruebas de carga en modo non-GUI
@@ -263,83 +261,6 @@ networks:
 
 Ambos servicios en la misma red bridge. El nombre `api` resuelve automáticamente dentro del contenedor de JMeter (DNS interno de Docker).
 
-## Replicar en Otro Servidor
-
-### Opción 1: Servidor con Git
-
-```bash
-# En el servidor destino
-git clone <url-del-repo>
-cd poc-performance
-
-# Levantar y ejecutar
-docker-compose up -d --build api
-docker-compose --profile test run --rm jmeter \
-  -n -t /jmeter/test-plans/test-plan.jmx \
-  -l /jmeter/results/results.jtl \
-  -e -o /jmeter/results/html-report
-```
-
-### Opción 2: Transferir archivos
-
-```bash
-# Desde tu máquina local
-scp -r poc-performance/ usuario@servidor:/opt/
-
-# En el servidor
-cd /opt/poc-performance
-docker-compose up -d --build api
-# ... ejecutar JMeter
-```
-
-### Opción 3: Usar imágenes pre-built
-
-```bash
-# Buildear localmente y pushear a registry
-docker-compose build
-docker tag poc-performance_api:latest tu-registry/banking-api:latest
-docker tag poc-performance_jmeter:latest tu-registry/jmeter:5.6.3
-docker push tu-registry/banking-api:latest
-docker push tu-registry/jmeter:5.6.3
-
-# En el servidor, modificar docker-compose.yml para usar imágenes remotas
-# image: tu-registry/banking-api:latest
-```
-
-## Comandos Útiles para DevOps
-
-```bash
-# Ver estado de los contenedores
-docker-compose ps
-
-# Ver uso de recursos en tiempo real
-docker stats
-
-# Logs en tiempo real
-docker-compose logs -f api
-docker-compose logs --tail=100 api
-
-# Reiniciar el API sin rebuild
-docker-compose restart api
-
-# Rebuild forzado (si cambiaste código)
-docker-compose up -d --build --force-recreate api
-
-# Limpiar todo (contenedores, redes, volúmenes)
-docker-compose down -v
-docker system prune -af
-
-# Ejecutar comando dentro del contenedor (debugging)
-docker-compose exec api bash
-docker-compose exec api curl localhost:8080/health
-
-# Ver configuración parseada de docker-compose
-docker-compose config
-
-# Escalar el servicio API (múltiples instancias)
-docker-compose up -d --scale api=3
-```
-
 ## Ajustar Recursos según el Servidor
 
 Edita `docker-compose.yml` según las specs del servidor:
@@ -386,44 +307,6 @@ jmeter:
 ```
 
 ## Troubleshooting
-
-### El API no levanta
-
-```bash
-# Ver logs detallados
-docker-compose logs api
-
-# Verificar que el puerto 8080 no esté ocupado
-netstat -tulpn | grep 8080
-lsof -i :8080
-
-# Verificar que el contenedor se construyó bien
-docker-compose build api
-```
-
-### JMeter no puede conectarse al API
-
-```bash
-# Verificar networking
-docker network inspect poc-performance_performance-network
-
-# Probar conectividad desde el contenedor de JMeter
-docker-compose run --rm jmeter curl http://api:8080/health
-
-# Verificar que el API está healthy
-docker-compose ps
-# Debe decir "healthy" en la columna Status
-```
-
-### Los resultados no se guardan
-
-```bash
-# Verificar permisos del directorio
-ls -la jmeter/results/
-chmod -R 755 jmeter/results/
-
-# Verificar que el volumen está montado
-docker-compose run --rm jmeter ls -la /jmeter/results/
 ```
 
 ### Performance pobre del API
@@ -458,21 +341,5 @@ poc-performance/
         ├── routes/           # Endpoints (health, accounts, transfers)
         └── models/           # Pydantic schemas
 ```
-
-## Notas Importantes
-
-- **Stateless:** El API no persiste datos entre reinicios (todo en memoria)
-- **No producción:** Este stack es SOLO para testing, no está hardened para producción
-- **Resource limits:** Ajustar según el servidor donde corras las pruebas
-- **Networking:** JMeter usa el nombre del servicio `api` como hostname (DNS interno de Docker)
-- **Logs JSON:** Todos los logs del API están en formato JSON para facilitar parsing
-
-## Próximos Pasos
-
-1. Clonar el repo en tu servidor de pruebas
-2. Ajustar los resource limits en `docker-compose.yml` según tu hardware
-3. Modificar el test plan (`test-plan.jmx`) según tus necesidades de carga
-4. Ejecutar las pruebas y analizar los resultados
-5. Si necesitas más carga, escalar JMeter con múltiples instancias o usar JMeter en modo distribuido
 
 # poc-performance-jmeter

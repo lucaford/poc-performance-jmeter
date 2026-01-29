@@ -8,7 +8,7 @@ Stack completo dockerizado para ejecutar pruebas de performance con JMeter contr
 2. **JMeter 5.6.3**: Motor de pruebas de carga en modo non-GUI
 3. **Docker Compose**: Orquestación de ambos servicios con networking, healthchecks y resource limits
 
-Todo está dockerizado para que puedas replicar las pruebas en cualquier servidor sin instalar dependencias.
+Todo está dockerizado.
 
 ## Arquitectura del Stack
 

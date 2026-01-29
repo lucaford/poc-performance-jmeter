@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./service
+      dockerfile: Dockerfile
+    container_name: banking-api
+    ports:
+      - "8080:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - performance-network
+
+  jmeter:
+    build:
+      context: ./jmeter
+      dockerfile: Dockerfile
+    container_name: jmeter-test
+    depends_on:
+      api:
+        condition: service_healthy
+    volumes:
+      - ./jmeter/test-plans:/jmeter/test-plans
+      - ./jmeter/results:/jmeter/results
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    profiles:
+      - test
+    networks:
+      - performance-network
+    # El comando se especifica al ejecutar docker-compose run
+    command: ["-n", "-t", "/jmeter/test-plans/test-plan.jmx", "-l", "/jmeter/results/results.jtl", "-e", "-o", "/jmeter/results/html-report"]
+
+networks:
+  performance-network:
+    driver: bridge
+
